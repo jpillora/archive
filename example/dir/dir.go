@@ -1,15 +1,13 @@
 package main
 
 import (
-	"io"
 	"os"
 
 	"github.com/jpillora/archiver"
 )
 
 func main() {
-	a := archiver.NewTar()
+	a, _ := archiver.NewWriter("file.tar", os.Stdout) //detects .tar
 	a.AddDir("foo")
 	a.Close()
-	io.Copy(os.Stdout, a)
 }

@@ -1,7 +1,6 @@
 package archiver
 
 import (
-	"bytes"
 	"compress/gzip"
 	"errors"
 	"io"
@@ -19,60 +18,49 @@ type Archiver struct {
 	DirMaxSize  int64
 	DirMaxFiles int
 	//state
-	buff    *bytes.Buffer
-	gz      *gzip.Writer
+	dst     io.Writer
 	archive archive
-	closed  bool
 }
 
-//New is useful when you have the destination path and want to
-//extract it's extension to use as the archive type
-func New(path string) (*Archiver, error) {
-	switch Extension(path) {
-	case ".tar":
-		return NewTar(), nil
-	case ".tar.gz":
-		return NewTarGz(), nil
-	case ".zip":
-		return NewZip(), nil
+//NewWriter is useful when you have a dynamic archive filename with extension
+func NewWriter(filename string, dst io.Writer) (*Archiver, error) {
+
+	a := &Archiver{
+		DirMaxSize:  DefaultMaxDirSize,
+		DirMaxFiles: DefaultMaxDirFiles,
+		dst:         dst,
 	}
-	return nil, errors.New("Invalid extension: " + path)
+
+	switch Extension(filename) {
+	case ".tar":
+		a.archive = newTarArchive(dst)
+	case ".tar.gz":
+		gz := gzip.NewWriter(dst)
+		a.dst = gz
+		a.archive = newTarArchive(gz)
+	case ".zip":
+		a.archive = newZipArchive(dst)
+	default:
+		return nil, errors.New("Invalid extension: " + filename)
+	}
+
+	return a, nil
+
 }
 
-func NewTar() *Archiver {
-	buff := &bytes.Buffer{}
-	return new(buff, newTarArchive(buff))
-}
-
-func NewTarGz() *Archiver {
-	buff := &bytes.Buffer{}
-	gz := gzip.NewWriter(buff)
-	a := new(buff, newTarArchive(buff))
-	a.gz = gz
+func NewTarWriter(dst io.Writer) *Archiver {
+	a, _ := NewWriter(".tar", dst)
 	return a
 }
 
-func NewZip() *Archiver {
-	buff := &bytes.Buffer{}
-	return new(buff, newZipArchive(buff))
+func NewTarGzWriter(dst io.Writer) *Archiver {
+	a, _ := NewWriter(".tar.gz", dst)
+	return a
 }
 
-func new(buff *bytes.Buffer, a archive) *Archiver {
-	return &Archiver{
-		DirMaxSize:  DefaultMaxDirSize,
-		DirMaxFiles: DefaultMaxDirFiles,
-		buff:        buff,
-		archive:     a,
-	}
-}
-
-func (a *Archiver) Read(p []byte) (int, error) {
-	n, err := a.buff.Read(p)
-	if err == io.EOF && !a.closed {
-		//TODO sleep here to slow loop?
-		return n, nil
-	}
-	return n, err
+func NewZipWriter(dst io.Writer) *Archiver {
+	a, _ := NewWriter(".zip", dst)
+	return a
 }
 
 func (a *Archiver) AddBytes(path string, contents []byte) error {
@@ -132,11 +120,10 @@ func (a *Archiver) Close() error {
 	if err := a.archive.close(); err != nil {
 		return err
 	}
-	if a.gz != nil {
-		if err := a.gz.Close(); err != nil {
+	if gz, ok := a.dst.(*gzip.Writer); ok {
+		if err := gz.Close(); err != nil {
 			return err
 		}
 	}
-	a.closed = true
 	return nil
 }

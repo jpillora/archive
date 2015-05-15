@@ -8,7 +8,7 @@ Archiver is a high-level API over Go's `archive`/[`zip`](http://golang.org/pkg/a
 
 * Simple
 * Supports `tar`, `tar.gz` and `zip`
-* Supports streaming
+* Great for streaming directories over the network, see [serve(1)](https://github.com/jpillora/serve) for an example of this
 
 ### Quick Usage
 
@@ -16,22 +16,16 @@ Archiver is a high-level API over Go's `archive`/[`zip`](http://golang.org/pkg/a
 package main
 
 import (
-	"io"
 	"os"
 
 	"github.com/jpillora/archiver"
 )
 
 func main() {
-	//create a new archive
-	a := archiver.NewTarGz() //or NewTar() or NewZip()
-	//add some files
-	a.AddBytes("foo.txt",     []byte("hello foo!"))
+	a := archiver.NewTarWriter(os.Stdout)
+	a.AddBytes("foo.txt", []byte("hello foo!"))
 	a.AddBytes("dir/bar.txt", []byte("hello bar!"))
-	//finalize it!
 	a.Close()
-	//write to stdout
-	io.Copy(os.Stdout, a)
 }
 ```
 
@@ -40,6 +34,8 @@ $ go run example.go | tar zxvf -
 x foo.txt
 x dir/bar.txt
 ```
+
+See the [example/](example/) for more
 
 #### MIT License
 

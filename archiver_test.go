@@ -21,8 +21,11 @@ func assert(t *testing.T, cond bool, msg string) {
 }
 
 func TestTar(t *testing.T) {
-	a := NewTar()
-	r := tar.NewReader(a)
+
+	buff := &bytes.Buffer{}
+
+	a := NewTarWriter(buff)
+	r := tar.NewReader(buff)
 
 	check(t, a.AddBytes("foo.txt", []byte("hello foo!")))
 	check(t, a.AddBytes("bar.txt", []byte("hello bar!")))
