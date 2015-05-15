@@ -1,6 +1,6 @@
 # archiver
 
-Archiver is a higher level API over Go's `compress/`[`zip`](http://golang.org/pkg/archive/zip),[`tar`](https://golang.org/pkg/archive/tar)
+Archiver is a high-level API over Go's `archive`/[`zip`](http://golang.org/pkg/archive/zip),[`tar`](https://golang.org/pkg/archive/tar)
 
 [![GoDoc](https://godoc.org/github.com/jpillora/archiver?status.svg)](https://godoc.org/github.com/jpillora/archiver)
 
