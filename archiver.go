@@ -5,8 +5,6 @@ import (
 	"compress/gzip"
 	"errors"
 	"io"
-	"log"
-	"time"
 
 	"os"
 	"path/filepath"
@@ -15,7 +13,7 @@ import (
 const DefaultMaxDirSize = 4e9  //4GB
 const DefaultMaxDirFiles = 1e5 //100,000
 
-//Archiver is a higher level API over compress/{zip,tar}
+//Archiver is a higher level API over archive/zip,tar
 type Archiver struct {
 	//config
 	DirMaxSize  int64
@@ -27,6 +25,8 @@ type Archiver struct {
 	closed  bool
 }
 
+//New is useful when you have the destination path and want to
+//extract it's extension to use as the archive type
 func New(path string) (*Archiver, error) {
 	switch Extension(path) {
 	case ".tar":
@@ -69,8 +69,6 @@ func new(buff *bytes.Buffer, a archive) *Archiver {
 func (a *Archiver) Read(p []byte) (int, error) {
 	n, err := a.buff.Read(p)
 	if err == io.EOF && !a.closed {
-		time.Sleep(time.Second)
-		log.Println("EOF")
 		//TODO sleep here to slow loop?
 		return n, nil
 	}
@@ -87,11 +85,13 @@ func (a *Archiver) AddBytes(path string, contents []byte) error {
 func (a *Archiver) AddFile(path string, f *os.File) error {
 	info, err := f.Stat()
 	if err != nil {
-
+		return err
 	}
 	return a.AddInfoFile(path, info, f)
 }
 
+//You can prevent archiver from performing an extra Stat by using AddInfoFile
+//instead of AddFile
 func (a *Archiver) AddInfoFile(path string, info os.FileInfo, f *os.File) error {
 	if err := checkPath(path); err != nil {
 		return err
@@ -129,14 +129,14 @@ func (a *Archiver) AddDir(path string) error {
 }
 
 func (a *Archiver) Close() error {
-	err := a.archive.close()
-	if err != nil {
+	if err := a.archive.close(); err != nil {
 		return err
 	}
-	err = nil
 	if a.gz != nil {
-		err = a.gz.Close()
+		if err := a.gz.Close(); err != nil {
+			return err
+		}
 	}
 	a.closed = true
-	return err
+	return nil
 }
