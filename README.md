@@ -26,7 +26,7 @@ func main() {
 	//create a new archive
 	a := archiver.NewTarGz() //or NewTar() or NewZip()
 	//add some files
-	a.AddBytes("foo.txt", []byte("hello foo!"))
+	a.AddBytes("foo.txt",     []byte("hello foo!"))
 	a.AddBytes("dir/bar.txt", []byte("hello bar!"))
 	//finalize it!
 	a.Close()
@@ -36,7 +36,7 @@ func main() {
 ```
 
 ``` sh
-$ go run example.go | tar xvf -
+$ go run example.go | tar zxvf -
 x foo.txt
 x dir/bar.txt
 ```
