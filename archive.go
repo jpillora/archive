@@ -88,6 +88,9 @@ func (a *Archive) AddDir(path string) error {
 	size := int64(0)
 	num := 0
 	return filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if !info.Mode().IsRegular() {
 			return nil
 		}
