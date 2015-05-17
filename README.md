@@ -1,14 +1,14 @@
-# archiver
+# archive
 
-Archiver is a high-level API over Go's `archive`/[`zip`](http://golang.org/pkg/archive/zip),[`tar`](https://golang.org/pkg/archive/tar)
+**Archive** combines Go's `archive`/[`zip`](http://golang.org/pkg/archive/zip) & [`tar`](https://golang.org/pkg/archive/tar) into a simpler, higher-level API
 
-[![GoDoc](https://godoc.org/github.com/jpillora/archiver?status.svg)](https://godoc.org/github.com/jpillora/archiver)
+[![GoDoc](https://godoc.org/github.com/jpillora/archive?status.svg)](https://godoc.org/github.com/jpillora/archive)
 
 ### Features
 
 * Simple
 * Supports `tar`, `tar.gz` and `zip`
-* Great for streaming directories over the network, see [serve(1)](https://github.com/jpillora/serve) for an example of this
+* Great for streaming directories over the network (e.g. see [serve(1)](https://github.com/jpillora/serve))
 
 ### Quick Usage
 
@@ -18,11 +18,11 @@ package main
 import (
 	"os"
 
-	"github.com/jpillora/archiver"
+	"github.com/jpillora/archive"
 )
 
 func main() {
-	a := archiver.NewTarWriter(os.Stdout)
+	a := archive.NewTarGzWriter(os.Stdout)
 	a.AddBytes("foo.txt", []byte("hello foo!"))
 	a.AddBytes("dir/bar.txt", []byte("hello bar!"))
 	a.Close()
@@ -36,6 +36,12 @@ x dir/bar.txt
 ```
 
 See the [example/](example/) for more
+
+#### Todo
+
+* Add extraction support
+* Add `.7z` archive type
+* Add `.lz` compression type
 
 #### MIT License
 

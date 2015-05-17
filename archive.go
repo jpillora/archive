@@ -1,4 +1,4 @@
-package archiver
+package archive
 
 import (
 	"compress/gzip"
@@ -9,25 +9,22 @@ import (
 	"path/filepath"
 )
 
-const DefaultMaxDirSize = 4e9  //4GB
-const DefaultMaxDirFiles = 1e5 //100,000
-
-//Archiver is a higher level API over archive/zip,tar
-type Archiver struct {
+//Archive** combines Go's archive/zip,tar into a simpler, higher-level API
+type Archive struct {
 	//config
-	DirMaxSize  int64
-	DirMaxFiles int
+	DirMaxSize  int64 //defaults to no limit (-1)
+	DirMaxFiles int   //defaults to no limit (-1)
 	//state
 	dst     io.Writer
 	archive archive
 }
 
-//NewWriter is useful when you have a dynamic archive filename with extension
-func NewWriter(filename string, dst io.Writer) (*Archiver, error) {
+//NewWriter is useful when you'd like a dynamic archive type using a filename with extension
+func NewWriter(filename string, dst io.Writer) (*Archive, error) {
 
-	a := &Archiver{
-		DirMaxSize:  DefaultMaxDirSize,
-		DirMaxFiles: DefaultMaxDirFiles,
+	a := &Archive{
+		DirMaxSize:  -1,
+		DirMaxFiles: -1,
 		dst:         dst,
 	}
 
@@ -48,29 +45,29 @@ func NewWriter(filename string, dst io.Writer) (*Archiver, error) {
 
 }
 
-func NewTarWriter(dst io.Writer) *Archiver {
+func NewTarWriter(dst io.Writer) *Archive {
 	a, _ := NewWriter(".tar", dst)
 	return a
 }
 
-func NewTarGzWriter(dst io.Writer) *Archiver {
+func NewTarGzWriter(dst io.Writer) *Archive {
 	a, _ := NewWriter(".tar.gz", dst)
 	return a
 }
 
-func NewZipWriter(dst io.Writer) *Archiver {
+func NewZipWriter(dst io.Writer) *Archive {
 	a, _ := NewWriter(".zip", dst)
 	return a
 }
 
-func (a *Archiver) AddBytes(path string, contents []byte) error {
+func (a *Archive) AddBytes(path string, contents []byte) error {
 	if err := checkPath(path); err != nil {
 		return err
 	}
 	return a.archive.addBytes(path, contents)
 }
 
-func (a *Archiver) AddFile(path string, f *os.File) error {
+func (a *Archive) AddFile(path string, f *os.File) error {
 	info, err := f.Stat()
 	if err != nil {
 		return err
@@ -78,29 +75,33 @@ func (a *Archiver) AddFile(path string, f *os.File) error {
 	return a.AddInfoFile(path, info, f)
 }
 
-//You can prevent archiver from performing an extra Stat by using AddInfoFile
+//You can prevent archive from performing an extra Stat by using AddInfoFile
 //instead of AddFile
-func (a *Archiver) AddInfoFile(path string, info os.FileInfo, f *os.File) error {
+func (a *Archive) AddInfoFile(path string, info os.FileInfo, f *os.File) error {
 	if err := checkPath(path); err != nil {
 		return err
 	}
 	return a.archive.addFile(path, info, f)
 }
 
-func (a *Archiver) AddDir(path string) error {
-	size := a.DirMaxSize
-	num := a.DirMaxFiles
+func (a *Archive) AddDir(path string) error {
+	size := int64(0)
+	num := 0
 	return filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
 		if !info.Mode().IsRegular() {
 			return nil
 		}
-		size -= info.Size()
-		if size <= 0 {
-			return errors.New("Surpassed maximum archive size")
+		if a.DirMaxSize >= 0 {
+			size += info.Size()
+			if size > a.DirMaxSize {
+				return errors.New("Surpassed maximum archive size")
+			}
 		}
-		num--
-		if num <= 0 {
-			return errors.New("Surpassed maximum number of files in archive")
+		if a.DirMaxFiles >= 0 {
+			num++
+			if num == a.DirMaxFiles+1 {
+				return errors.New("Surpassed maximum number of files in archive")
+			}
 		}
 		// log.Printf("#%d %09d add file %s", num, size, p)
 		rel, err := filepath.Rel(path, p)
@@ -116,7 +117,7 @@ func (a *Archiver) AddDir(path string) error {
 	})
 }
 
-func (a *Archiver) Close() error {
+func (a *Archive) Close() error {
 	if err := a.archive.close(); err != nil {
 		return err
 	}
