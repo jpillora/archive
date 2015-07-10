@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"errors"
 	"io"
+	"sync"
 
 	"os"
 	"path/filepath"
@@ -16,6 +17,7 @@ type Archive struct {
 	DirMaxFiles int   //defaults to no limit (-1)
 	//state
 	dst     io.Writer
+	lock    sync.Mutex
 	archive archive
 }
 
@@ -64,15 +66,9 @@ func (a *Archive) AddBytes(path string, contents []byte) error {
 	if err := checkPath(path); err != nil {
 		return err
 	}
+	a.lock.Lock()
+	defer a.lock.Unlock()
 	return a.archive.addBytes(path, contents)
-}
-
-func (a *Archive) AddFile(path string, f *os.File) error {
-	info, err := f.Stat()
-	if err != nil {
-		return err
-	}
-	return a.AddInfoFile(path, info, f)
 }
 
 //You can prevent archive from performing an extra Stat by using AddInfoFile
@@ -81,7 +77,17 @@ func (a *Archive) AddInfoFile(path string, info os.FileInfo, f *os.File) error {
 	if err := checkPath(path); err != nil {
 		return err
 	}
+	a.lock.Lock()
+	defer a.lock.Unlock()
 	return a.archive.addFile(path, info, f)
+}
+
+func (a *Archive) AddFile(path string, f *os.File) error {
+	info, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	return a.AddInfoFile(path, info, f)
 }
 
 func (a *Archive) AddDir(path string) error {
