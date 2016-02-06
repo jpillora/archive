@@ -18,11 +18,11 @@ func newZipArchive(dst io.Writer) *zipArchive {
 	}
 }
 
-func (a *zipArchive) addBytes(path string, contents []byte) error {
+func (a *zipArchive) addBytes(path string, contents []byte, mtime time.Time) error {
 	h := &zip.FileHeader{
 		Name: path,
 	}
-	h.SetModTime(time.Now())
+	h.SetModTime(mtime)
 	f, err := a.writer.CreateHeader(h)
 	if err != nil {
 		return err
