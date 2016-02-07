@@ -23,11 +23,11 @@ func newTarArchive(dst io.Writer) *tarArchive {
 	}
 }
 
-func (a *tarArchive) addBytes(path string, contents []byte) error {
+func (a *tarArchive) addBytes(path string, contents []byte, mtime time.Time) error {
 	h := &tar.Header{
 		Name:    path,
 		Size:    int64(len(contents)),
-		ModTime: time.Now(),
+		ModTime: mtime,
 		Mode:    int64(a.filemode),
 	}
 	if err := a.writer.WriteHeader(h); err != nil {

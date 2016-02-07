@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"sync"
+	"time"
 
 	"os"
 	"path/filepath"
@@ -63,12 +64,16 @@ func NewZipWriter(dst io.Writer) *Archive {
 }
 
 func (a *Archive) AddBytes(path string, contents []byte) error {
+	return a.AddBytesMTime(path, contents, time.Now())
+}
+
+func (a *Archive) AddBytesMTime(path string, contents []byte, mtime time.Time) error {
 	if err := checkPath(path); err != nil {
 		return err
 	}
 	a.lock.Lock()
 	defer a.lock.Unlock()
-	return a.archive.addBytes(path, contents)
+	return a.archive.addBytes(path, contents, mtime)
 }
 
 //You can prevent archive from performing an extra Stat by using AddInfoFile
