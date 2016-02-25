@@ -9,7 +9,8 @@ import (
 )
 
 type zipArchive struct {
-	writer *zip.Writer
+	compressed bool
+	writer     *zip.Writer
 }
 
 func newZipArchive(dst io.Writer) *zipArchive {
@@ -18,10 +19,22 @@ func newZipArchive(dst io.Writer) *zipArchive {
 	}
 }
 
+func newCompressedZipArchive(dst io.Writer) *zipArchive {
+	return &zipArchive{
+		compressed: true,
+		writer:     zip.NewWriter(dst),
+	}
+}
+
 func (a *zipArchive) addBytes(path string, contents []byte, mtime time.Time) error {
 	h := &zip.FileHeader{
 		Name: path,
 	}
+
+	if a.compressed {
+		h.Method = zip.Deflate
+	}
+
 	h.SetModTime(mtime)
 	f, err := a.writer.CreateHeader(h)
 	if err != nil {
@@ -39,7 +52,12 @@ func (a *zipArchive) addFile(path string, info os.FileInfo, f *os.File) error {
 	if err != nil {
 		return err
 	}
+
 	h.Name = path
+	if a.compressed {
+		h.Method = zip.Deflate
+	}
+
 	zf, err := a.writer.CreateHeader(h)
 	if err != nil {
 		return err
