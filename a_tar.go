@@ -23,6 +23,25 @@ func newTarArchive(dst io.Writer) *tarArchive {
 	}
 }
 
+func (a *tarArchive) addReader(path string, info os.FileInfo, r io.Reader) error {
+	if !info.Mode().IsRegular() {
+		return errors.New("Only regular files supported: " + path)
+	}
+
+	h, err := tar.FileInfoHeader(info, "")
+	if err != nil {
+		return err
+	}
+
+	h.Name = path
+	if err := a.writer.WriteHeader(h); err != nil {
+		return err
+	}
+
+	_, err = io.Copy(a.writer, r)
+	return err
+}
+
 func (a *tarArchive) addBytes(path string, contents []byte, mtime time.Time) error {
 	h := &tar.Header{
 		Name:    path,

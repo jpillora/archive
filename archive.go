@@ -76,6 +76,12 @@ func (a *Archive) AddBytesMTime(path string, contents []byte, mtime time.Time) e
 	return a.archive.addBytes(path, contents, mtime)
 }
 
+func (a *Archive) AddInfoReader(path string, info os.FileInfo, r io.Reader) error {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+	return a.archive.addReader(path, info, r)
+}
+
 //You can prevent archive from performing an extra Stat by using AddInfoFile
 //instead of AddFile
 func (a *Archive) AddInfoFile(path string, info os.FileInfo, f *os.File) error {

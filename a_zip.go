@@ -26,6 +26,30 @@ func newCompressedZipArchive(dst io.Writer) *zipArchive {
 	}
 }
 
+func (a *zipArchive) addReader(path string, info os.FileInfo, r io.Reader) error {
+	if !info.Mode().IsRegular() {
+		return errors.New("Only regular files supported: " + path)
+	}
+
+	h, err := zip.FileInfoHeader(info)
+	if err != nil {
+		return err
+	}
+
+	h.Name = path
+	if a.compressed {
+		h.Method = zip.Deflate
+	}
+
+	zf, err := a.writer.CreateHeader(h)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(zf, r)
+	return err
+}
+
 func (a *zipArchive) addBytes(path string, contents []byte, mtime time.Time) error {
 	h := &zip.FileHeader{
 		Name: path,
