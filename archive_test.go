@@ -4,9 +4,41 @@ import (
 	"archive/tar"
 	"bytes"
 	"io"
+	"os"
+	"strings"
+	"time"
 
 	"testing"
 )
+
+type mockInfo struct {
+	name string
+	size int64
+}
+
+func (m *mockInfo) Name() string {
+	return m.name
+}
+
+func (m *mockInfo) Size() int64 {
+	return m.size
+}
+
+func (m *mockInfo) Mode() os.FileMode {
+	return 0
+}
+
+func (m *mockInfo) ModTime() time.Time {
+	return time.Unix(0, 0)
+}
+
+func (m *mockInfo) IsDir() bool {
+	return false
+}
+
+func (m *mockInfo) Sys() interface{} {
+	return nil
+}
 
 func check(t *testing.T, err error) {
 	if err != nil {
@@ -51,4 +83,30 @@ func TestTar(t *testing.T) {
 
 	_, err = r.Next()
 	assert(t, err == io.EOF, "should be end of file")
+}
+
+func TestArchive_AddInfoReader(t *testing.T) {
+	var buf bytes.Buffer
+	a := NewTarWriter(&buf)
+	r := tar.NewReader(&buf)
+
+	info := &mockInfo{
+		name: "Readme.md",
+		size: 11,
+	}
+
+	check(t, a.AddInfoReader("Readme.md", info, strings.NewReader("hello world")))
+	check(t, a.Close())
+
+	h, err := r.Next()
+	check(t, err)
+	assert(t, h.Name == "Readme.md", "missing Readme.md")
+	b := make([]byte, h.Size)
+
+	_, err = r.Read(b)
+	check(t, err)
+	assert(t, bytes.Compare(b, []byte("hello world")) == 0, "missing Readme.md content")
+
+	h, err = r.Next()
+	assert(t, err == io.EOF, "missing EOF")
 }
